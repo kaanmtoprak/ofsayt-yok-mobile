@@ -8,6 +8,7 @@ import {
   type SquadPlayer,
   type TeamCompetition,
 } from "@/services/teamDetailApi";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -148,7 +149,9 @@ const TeamDetailScreen = () => {
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center px-6">
-          <Text className="text-center text-sm text-neutral-600">{error}</Text>
+          <Text className="text-center text-sm text-neutral-600">
+            {friendlyErrorMessage(error, "Takım detayları şu anda yüklenemiyor.")}
+          </Text>
         </View>
       ) : (
         <ScrollView contentContainerStyle={{ padding: 12, paddingBottom: 32 }} showsVerticalScrollIndicator={false}>
@@ -201,7 +204,7 @@ const TeamDetailScreen = () => {
 
             {activeTab === "matches" ? (
               matches.length === 0 ? (
-                <Text className="text-sm text-neutral-500">Son maç bulunamadı.</Text>
+                <Text className="text-sm text-neutral-500">Son maç verisi bulunmamaktadır.</Text>
               ) : (
                 matches.map((m, i) => (
                   <Pressable
@@ -227,7 +230,7 @@ const TeamDetailScreen = () => {
                 ))
               )
             ) : squad.length === 0 ? (
-              <Text className="text-sm text-neutral-500">Kadro bilgisi bulunamadı.</Text>
+              <Text className="text-sm text-neutral-500">Kadro bilgisi bulunmamaktadır.</Text>
             ) : (
               squad.map((p, i) => (
                 <View key={`${p.id ?? p.name ?? i}`} className="mb-2 flex-row items-center rounded-xl bg-neutral-50 px-3 py-2">
@@ -245,7 +248,7 @@ const TeamDetailScreen = () => {
             {compLoading ? (
               <Text className="text-sm text-neutral-500">Puan durumu güncelleniyor...</Text>
             ) : tableRows.length === 0 ? (
-              <Text className="text-sm text-neutral-500">Puan durumu bulunamadı.</Text>
+              <Text className="text-sm text-neutral-500">Puan durumu verisi bulunmamaktadır.</Text>
             ) : (
               <>
                 <View className="mb-1 flex-row border-b border-neutral-200 pb-2">
@@ -310,7 +313,7 @@ const TeamDetailScreen = () => {
                   </Pressable>
                 );
               }}
-              ListEmptyComponent={<Text className="text-sm text-neutral-500">Lig bulunamadı.</Text>}
+              ListEmptyComponent={<Text className="text-sm text-neutral-500">Lig listesi bulunmamaktadır.</Text>}
             />
           </View>
         </View>

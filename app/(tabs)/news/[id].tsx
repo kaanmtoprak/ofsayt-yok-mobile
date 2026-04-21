@@ -1,4 +1,5 @@
 import { getNews, getNewsById, type NewsItem } from "@/services/newsApi";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { timeAgo } from "@/utilities/timeAgo";
 import { Image } from "expo-image";
 import { router, useLocalSearchParams } from "expo-router";
@@ -50,7 +51,12 @@ const NewsDetails = () => {
       })
       .catch((e) => {
         if (requestId !== requestIdRef.current) return;
-        setError(e instanceof Error ? e.message : "Haber yüklenemedi.");
+        setError(
+          friendlyErrorMessage(
+            e instanceof Error ? e.message : null,
+            "Haber detayı şu anda yüklenemiyor. Lütfen tekrar deneyin."
+          )
+        );
       })
       .finally(() => {
         if (requestId !== requestIdRef.current) return;
@@ -80,7 +86,7 @@ const NewsDetails = () => {
       {loading ? (
         <View className="flex-1 items-center justify-center bg-white">
           <ActivityIndicator size="large" color="#16a34a" />
-          <Text className="mt-3 text-neutral-500">Yükleniyor...</Text>
+          <Text className="mt-3 text-neutral-500">Haber detayı yükleniyor...</Text>
         </View>
       ) : error ? (
         <View className="flex-1 items-center justify-center bg-white px-8">

@@ -9,6 +9,7 @@ import {
 } from "@/redux/slices/matches/service";
 import { type ApiMatch } from "@/redux/slices/matches/matchesSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/store/hooks";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -361,6 +362,12 @@ const MatchesScreen = () => {
   }, [grouped]);
 
   const listBottom = 32 + Math.max(insets.bottom, 8);
+  const emptyMessage =
+    filter === "live"
+      ? "Şu an canlı oynanan bir maç bulunmamaktadır."
+      : filter === "finished"
+        ? "Seçilen tarihte bitmiş maç bulunmamaktadır."
+        : "Seçilen tarihte maç bulunmamaktadır.";
 
   return (
     <View className="flex-1 bg-neutral-50">
@@ -422,8 +429,9 @@ const MatchesScreen = () => {
               <Text className="text-center text-neutral-500">
                 {loading
                   ? "Maçlar yükleniyor..."
-                  : error ??
-                    "Bu filtre için maç yok veya veri yüklenemedi. Backend endpoint: /api/livescore/matches/live?page=1"}
+                  : error
+                    ? friendlyErrorMessage(error, "Maç verileri alınamadı. Lütfen tekrar deneyin.")
+                    : emptyMessage}
               </Text>
               {loading ? <ActivityIndicator className="mt-3" color={BRAND} /> : null}
             </View>
