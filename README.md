@@ -1,7 +1,7 @@
 # First App (React Native + Expo)
 
 Futbol odaklı mobil uygulama.  
-Ana ekranlar: `Maçlar`, `Puan Durumu`, `Haberler`, `Ayarlar`.
+Ana ekranlar: `Maçlar`, `Puan Durumu`, `Haberler`, `Profil`.
 
 ## Kurulum
 

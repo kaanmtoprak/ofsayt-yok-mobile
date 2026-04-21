@@ -87,6 +87,27 @@ export default function TabsLayout() {
           }}
         />
       ))}
+      <Tabs.Screen
+        name="news/[id]"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="matches/[id]"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
+      <Tabs.Screen
+        name="teams/[id]"
+        options={{
+          href: null,
+          headerShown: false,
+        }}
+      />
     </Tabs>
   );
 }

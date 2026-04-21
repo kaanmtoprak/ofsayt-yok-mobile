@@ -2,7 +2,7 @@ import { getNews, type NewsItem } from "@/services/newsApi";
 import { timeAgo } from "@/utilities/timeAgo";
 import { Image } from "expo-image";
 import { router } from "expo-router";
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, Text, View } from "react-native";
 
 const News = () => {
@@ -10,40 +10,33 @@ const News = () => {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const requestIdRef = useRef(0);
 
-  const load = useCallback(async (opts?: { refreshing?: boolean }) => {
+  const load = useCallback(async (opts?: { refreshing?: boolean; silent?: boolean }) => {
+    const requestId = ++requestIdRef.current;
     if (opts?.refreshing) setRefreshing(true);
-    else setLoading(true);
+    else if (!opts?.silent) setLoading(true);
     setError(null);
     try {
       const data = await getNews(15);
+      if (requestId !== requestIdRef.current) return;
       setItems(data);
     } catch (e) {
+      if (requestId !== requestIdRef.current) return;
       setError(e instanceof Error ? e.message : "Haberler yüklenemedi.");
     } finally {
+      if (requestId !== requestIdRef.current) return;
       setLoading(false);
       setRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const data = await getNews(15);
-        if (!cancelled) setItems(data);
-      } catch (e) {
-        if (!cancelled) setError(e instanceof Error ? e.message : "Haberler yüklenemedi.");
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
+    void load();
     return () => {
-      cancelled = true;
+      requestIdRef.current += 1;
     };
-  }, []);
+  }, [load]);
 
   if (loading) {
     return (
