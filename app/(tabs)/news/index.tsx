@@ -1,4 +1,5 @@
 import { getNews, type NewsItem } from "@/services/newsApi";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { timeAgo } from "@/utilities/timeAgo";
 import { Image } from "expo-image";
 import { router } from "expo-router";
@@ -23,7 +24,12 @@ const News = () => {
       setItems(data);
     } catch (e) {
       if (requestId !== requestIdRef.current) return;
-      setError(e instanceof Error ? e.message : "Haberler yüklenemedi.");
+      setError(
+        friendlyErrorMessage(
+          e instanceof Error ? e.message : null,
+          "Haberler şu anda yüklenemiyor. Lütfen tekrar deneyin."
+        )
+      );
     } finally {
       if (requestId !== requestIdRef.current) return;
       setLoading(false);

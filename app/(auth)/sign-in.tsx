@@ -1,5 +1,6 @@
 import { clearAuthError, signIn } from "@/redux/slices/auth/authSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/store/hooks";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -72,7 +73,10 @@ const SignIn = () => {
           </View>
 
           {(localError || error) && (
-            <Text className="mt-3 text-sm text-red-600">{localError ?? error}</Text>
+            <Text className="mt-3 text-sm text-red-600">
+              {localError ??
+                friendlyErrorMessage(error, "Giriş yapılamadı. Bilgilerinizi kontrol ederek tekrar deneyin.")}
+            </Text>
           )}
 
           <Pressable

@@ -6,6 +6,7 @@ import {
     updatePassword,
 } from "@/redux/slices/auth/authSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/store/hooks";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { router } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import {
@@ -76,7 +77,13 @@ const Settings = () => {
       ).unwrap();
       setProfileMsg({ type: "ok", text: "Profil güncellendi." });
     } catch (e) {
-      setProfileMsg({ type: "err", text: e instanceof Error ? e.message : "Profil güncellenemedi." });
+      setProfileMsg({
+        type: "err",
+        text: friendlyErrorMessage(
+          e instanceof Error ? e.message : null,
+          "Profil bilgileri güncellenemedi. Lütfen tekrar deneyin."
+        ),
+      });
     }
   };
 
@@ -103,7 +110,13 @@ const Settings = () => {
       setConfirmPassword("");
       setPasswordMsg({ type: "ok", text: "Şifre güncellendi." });
     } catch (e) {
-      setPasswordMsg({ type: "err", text: e instanceof Error ? e.message : "Şifre değiştirilemedi." });
+      setPasswordMsg({
+        type: "err",
+        text: friendlyErrorMessage(
+          e instanceof Error ? e.message : null,
+          "Şifre değiştirilemedi. Lütfen tekrar deneyin."
+        ),
+      });
     }
   };
 
@@ -124,7 +137,11 @@ const Settings = () => {
           <Text className="mt-2 text-sm text-neutral-500">
             Profilini yönetmek için giriş yapman gerekiyor.
           </Text>
-          {error ? <Text className="mt-3 text-sm text-red-600">{error}</Text> : null}
+          {error ? (
+            <Text className="mt-3 text-sm text-red-600">
+              {friendlyErrorMessage(error, "Oturum doğrulanamadı. Lütfen tekrar giriş yapın.")}
+            </Text>
+          ) : null}
           <Pressable
             onPress={() =>
               router.push({ pathname: "/(auth)/sign-in", params: { callbackUrl: "/(tabs)/settings" } })

@@ -1,3 +1,4 @@
+import CommentsSection from "@/components/match-detail/CommentsSection";
 import EventsCard from "@/components/match-detail/EventsCard";
 import LineupCard from "@/components/match-detail/LineupCard";
 import MatchHeaderCard from "@/components/match-detail/MatchHeaderCard";
@@ -18,6 +19,7 @@ import {
   type MatchLineupData,
   type MatchStatsData,
 } from "@/services/matchDetailApi";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
@@ -63,7 +65,12 @@ const MatchDetailScreen = () => {
         const table = await getCompetitionTableFull(competitionId, { season: seasonId });
         setStandings(table);
       } catch (e) {
-        setStandingsError(e instanceof Error ? e.message : "Puan durumu yüklenemedi.");
+        setStandingsError(
+          friendlyErrorMessage(
+            e instanceof Error ? e.message : null,
+            "Puan durumu şu anda yüklenemiyor."
+          )
+        );
       } finally {
         setStandingsLoading(false);
       }
@@ -131,7 +138,12 @@ const MatchDetailScreen = () => {
         }
       } catch (e) {
         if (cancelled || requestRef.current !== requestId) return;
-        setError(e instanceof Error ? e.message : "Maç detayı yüklenemedi.");
+        setError(
+          friendlyErrorMessage(
+            e instanceof Error ? e.message : null,
+            "Maç detayı şu anda yüklenemiyor."
+          )
+        );
       } finally {
         if (!cancelled && requestRef.current === requestId) {
           setLoading(false);
@@ -201,6 +213,8 @@ const MatchDetailScreen = () => {
               }}
             />
           )}
+          <View className="h-3" />
+          {matchId ? <CommentsSection matchId={matchId} /> : null}
         </ScrollView>
       )}
     </View>

@@ -9,6 +9,7 @@ import {
 import { useAppDispatch, useAppSelector } from "@/redux/store/hooks";
 import type { CompetitionTableStandingRow, TopScorerEntry } from "@/redux/slices/standings/service";
 import { formatSeasonLabel } from "@/utilities/seasonLabel";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
@@ -155,11 +156,13 @@ const Points = () => {
             </View>
           ) : error ? (
             <View className="flex-1 items-center justify-center px-6">
-              <Text className="text-center text-neutral-500">{error}</Text>
+              <Text className="text-center text-neutral-500">
+                {friendlyErrorMessage(error, "Puan durumu verileri şu anda alınamıyor.")}
+              </Text>
             </View>
           ) : rows.length === 0 && scorerRows.length === 0 ? (
             <View className="flex-1 items-center justify-center px-6">
-              <Text className="text-center text-neutral-500">Puan tablosu bulunamadi.</Text>
+              <Text className="text-center text-neutral-500">Bu lig için puan durumu bulunmamaktadır.</Text>
             </View>
           ) : (
             <>
@@ -269,7 +272,7 @@ const Points = () => {
                     })}
                     {scorerRows.length === 0 ? (
                       <View className="items-center justify-center py-5">
-                        <Text className="text-sm text-neutral-500">Gol kralligi verisi bulunamadi.</Text>
+                        <Text className="text-sm text-neutral-500">Gol krallığı verisi bulunmamaktadır.</Text>
                       </View>
                     ) : null}
                   </View>

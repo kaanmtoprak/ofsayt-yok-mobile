@@ -1,5 +1,6 @@
 import { clearAuthError, signUp } from "@/redux/slices/auth/authSlice";
 import { useAppDispatch, useAppSelector } from "@/redux/store/hooks";
+import { friendlyErrorMessage } from "@/utilities/errorMessage";
 import { Link, router, useLocalSearchParams } from "expo-router";
 import React, { useState } from "react";
 import {
@@ -109,7 +110,10 @@ const SignUp = () => {
           </View>
 
           {(localError || error) && (
-            <Text className="mt-3 text-sm text-red-600">{localError ?? error}</Text>
+            <Text className="mt-3 text-sm text-red-600">
+              {localError ??
+                friendlyErrorMessage(error, "Kayıt işlemi tamamlanamadı. Lütfen tekrar deneyin.")}
+            </Text>
           )}
 
           <Pressable
