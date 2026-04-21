@@ -7,18 +7,18 @@ export const tabs = [
         icon: icons.football,
     },
     {
-        name: "news",
+        name: "news/index",
         title: "Haberler",
         icon: icons.news,
-    },
-    {
-        name: "settings",
-        title: "Ayarlar",
-        icon: icons.settings,
     },
     {
         name: "points",
         title: "Puan Durumu",
         icon: icons.points,
     },
+    {
+        name: "settings",
+        title: "Profil",
+        icon: icons.settings,
+    }
 ]

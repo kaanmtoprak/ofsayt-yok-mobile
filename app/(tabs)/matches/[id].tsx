@@ -3,14 +3,21 @@ import LineupCard from "@/components/match-detail/LineupCard";
 import MatchHeaderCard from "@/components/match-detail/MatchHeaderCard";
 import StandingsCard from "@/components/match-detail/StandingsCard";
 import StatsCard from "@/components/match-detail/StatsCard";
+import type { ApiMatch } from "@/redux/slices/matches/matchesSlice";
 import {
   getCompetitionTableFull,
   getSeasonsList,
   type CompetitionTableData,
   type SeasonListItem,
 } from "@/redux/slices/standings/service";
-import type { ApiMatch } from "@/redux/slices/matches/matchesSlice";
-import { getMatchLineups, getMatchStats, getMatchWithEvents, type MatchEvent, type MatchLineupData, type MatchStatsData } from "@/services/matchDetailApi";
+import {
+  getMatchLineups,
+  getMatchStats,
+  getMatchWithEvents,
+  type MatchEvent,
+  type MatchLineupData,
+  type MatchStatsData,
+} from "@/services/matchDetailApi";
 import { router, useLocalSearchParams } from "expo-router";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { ActivityIndicator, Pressable, ScrollView, Text, View } from "react-native";
