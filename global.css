@@ -1,0 +1,8 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6;
+  --color-green: #1BA76F;
+  --color-brand-green: #1BA76F;
+  --shadow-card: 0 20px 50px rgba(0, 0, 0, 0.35);
+}
