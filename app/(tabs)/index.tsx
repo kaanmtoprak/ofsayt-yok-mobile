@@ -1,6 +1,5 @@
 import { BIG_FIVE_COMPETITION_ORDER, TURKEY_COMPETITION_IDS, UEFA_TIER2_COMPETITION_IDS } from "@/constants/leagues";
-import { fetchLiveMatches } from "@/redux/slices/matches/actions";
-import { refreshLiveFixtures } from "@/redux/slices/matches/actions";
+import { fetchLiveMatches, refreshLiveFixtures } from "@/redux/slices/matches/actions";
 import {
   groupMatchesByLeague,
   isLiveMatchOnSelectedDate,
@@ -16,10 +15,6 @@ import { useRouter } from "expo-router";
 import React, { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, Pressable, SectionList, Text, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-
-// --- API (data.match[]) ---
-
-// --- UI ---
 
 type MatchStatus = "scheduled" | "live" | "finished";
 
@@ -73,7 +68,6 @@ const TR_WEEKDAYS = ["Pazar", "Pazartesi", "Sali", "Carsamba", "Persembe", "Cuma
 const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
 
 const shiftIsoDate = (isoDate: string, days: number): string => {
-  // Web ile birebir: gün kaymasını önlemek için noon anchor + UTC slice.
   const d = new Date(`${isoDate}T12:00:00`);
   d.setDate(d.getDate() + days);
   return toIsoDate(d);
@@ -153,13 +147,11 @@ const liveDisplay = (time?: string, status?: string): { minute?: number; label?:
 
 const apiMatchToRow = (m: ApiMatch): MatchRow => {
   const status = mapApiStatus(m.status);
-  const liveInfo =
-    status === "live" ? liveDisplay(m.time, m.status) : ({} as { minute?: number; label?: string });
+  const liveInfo = status === "live" ? liveDisplay(m.time, m.status) : {};
   const score = parseScoreString(m.scores?.score ?? m.score);
   const ht = parseScoreString(m.scores?.ht_score ?? m.ht_score);
 
   return {
-    // Polling sırasında source (fixture/history/live) değişse de satırın key'i sabit kalmalı.
     id: String(m.id),
     matchId: Number(m.id),
     date: m.date,

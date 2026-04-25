@@ -168,68 +168,6 @@ const getFixturesByDate = async (isoDate: string, competitionId?: number): Promi
   return fetchOne(isoDate);
 };
 
-const getFixturesByDatePage = async (
-  isoDate: string,
-  page = 1,
-  competitionId?: number
-): Promise<PaginatedMatches> => {
-  const dateParam = isoDate === todayIsoUtc() ? "today" : isoDate;
-  const params: Record<string, string | number | boolean | undefined> = { date: dateParam, page };
-  if (competitionId != null) params.competition_id = competitionId;
-  const response = await get<MatchesApiResponse>("fixtures/list.json", params);
-  const list = response.data?.fixtures ?? response.data?.fixture;
-  if (response.success && Array.isArray(list)) {
-    return {
-      matches: list.map(normalizeFixtureToMatch),
-      totalPages: parseTotalPages(response.data),
-      page,
-    };
-  }
-  if (response.success && Array.isArray(response.data?.match)) {
-    return {
-      matches: response.data.match,
-      totalPages: parseTotalPages(response.data),
-      page,
-    };
-  }
-  return { matches: [], totalPages: 1, page };
-};
-
-const getAllFixturesByDate = async (isoDate: string, competitionId?: number): Promise<ApiMatch[]> => {
-  const first = await getFixturesByDatePage(isoDate, 1, competitionId);
-  if (first.totalPages > 1) {
-    const rest = await Promise.all(
-      Array.from({ length: first.totalPages - 1 }, (_, i) =>
-        getFixturesByDatePage(isoDate, i + 2, competitionId)
-      )
-    );
-    return dedupeMatchesById([...first.matches, ...rest.flatMap((r) => r.matches)]);
-  }
-
-  // Upstream fixtures/list bazı durumlarda total_pages dönmüyor.
-  // Bu nedenle ardışık sayfalarda veri var mı diye kontrollü probing yapıyoruz.
-  const combined: ApiMatch[] = [...first.matches];
-  const seenIds = new Set(combined.map((m) => Number(m.id)));
-  const MAX_FIXTURE_PAGES_WITHOUT_TOTAL = 8;
-  for (let page = 2; page <= MAX_FIXTURE_PAGES_WITHOUT_TOTAL; page += 1) {
-    const next = await getFixturesByDatePage(isoDate, page, competitionId);
-    if (!next.matches.length) break;
-
-    let newCount = 0;
-    for (const match of next.matches) {
-      const id = Number(match.id);
-      if (!Number.isFinite(id) || seenIds.has(id)) continue;
-      seenIds.add(id);
-      combined.push(match);
-      newCount += 1;
-    }
-    // Yeni kayıt gelmiyorsa daha fazla sayfa denemeye gerek yok.
-    if (newCount === 0) break;
-  }
-
-  return dedupeMatchesById(combined);
-};
-
 const isLiveMatchOnSelectedDate = (m: ApiMatch, selectedDate: string): boolean => {
   const d = m.date?.trim();
   if (d) return d === selectedDate;
@@ -291,8 +229,6 @@ const groupMatchesByLeague = (matches: ApiMatch[]): GroupedLeagueMatches[] => {
     const safeCompetitionId = Number.isFinite(competitionId) ? competitionId : 0;
     const safeCountryId = Number.isFinite(countryId) && countryId > 0 ? countryId : undefined;
     const normalizedName = competitionName.trim().toLowerCase();
-    // API bazen competition_id döndürmediği için ligleri tek "0" grubunda topluyordu.
-    // Web ile aynı sonucu koruyup bu karışmayı önlemek için ad bazlı fallback key kullanıyoruz.
     const groupKey =
       safeCompetitionId > 0 ? `id:${safeCompetitionId}` : `name:${normalizedName || "unknown"}`;
 
@@ -329,7 +265,6 @@ export {
   getLiveMatches,
   getAllLiveMatches,
   getFixturesByDate,
-  getAllFixturesByDate,
   normalizeFixtureToMatch,
   isLiveMatchOnSelectedDate,
   mergeMatchesForAllTab,
