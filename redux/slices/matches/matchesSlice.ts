@@ -28,6 +28,9 @@ export type ApiScores = {
 
 export type ApiMatch = {
   id: number;
+  competition_id?: number | string;
+  country_id?: number | string;
+  country_name?: string;
   date?: string;
   time?: string;
   scheduled?: string;

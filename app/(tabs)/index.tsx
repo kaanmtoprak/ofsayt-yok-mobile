@@ -1,3 +1,4 @@
+import { BIG_FIVE_COMPETITION_ORDER, TURKEY_COMPETITION_IDS, UEFA_TIER2_COMPETITION_IDS } from "@/constants/leagues";
 import { fetchLiveMatches } from "@/redux/slices/matches/actions";
 import { refreshLiveFixtures } from "@/redux/slices/matches/actions";
 import {
@@ -25,6 +26,7 @@ type MatchStatus = "scheduled" | "live" | "finished";
 type MatchRow = {
   id: string;
   matchId: number;
+  date?: string;
   kickoff: string;
   status: MatchStatus;
   liveMinute?: number;
@@ -68,21 +70,17 @@ const TR_MONTHS = [
 ];
 const TR_WEEKDAYS = ["Pazar", "Pazartesi", "Sali", "Carsamba", "Persembe", "Cuma", "Cumartesi"];
 
-const toIsoDate = (date: Date): string => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+const toIsoDate = (date: Date): string => date.toISOString().slice(0, 10);
 
 const shiftIsoDate = (isoDate: string, days: number): string => {
-  const d = new Date(`${isoDate}T00:00:00`);
+  // Web ile birebir: gün kaymasını önlemek için noon anchor + UTC slice.
+  const d = new Date(`${isoDate}T12:00:00`);
   d.setDate(d.getDate() + days);
   return toIsoDate(d);
 };
 
 const formatDateLabel = (isoDate: string): string => {
-  const d = new Date(`${isoDate}T00:00:00`);
+  const d = new Date(`${isoDate}T12:00:00`);
   return `${d.getDate()} ${TR_MONTHS[d.getMonth()]} ${TR_WEEKDAYS[d.getDay()]}`;
 };
 
@@ -161,8 +159,10 @@ const apiMatchToRow = (m: ApiMatch): MatchRow => {
   const ht = parseScoreString(m.scores?.ht_score ?? m.ht_score);
 
   return {
-    id: `${String(m.id)}_${String(m.competition?.id ?? m.competition_name ?? 0)}`,
+    // Polling sırasında source (fixture/history/live) değişse de satırın key'i sabit kalmalı.
+    id: String(m.id),
     matchId: Number(m.id),
+    date: m.date,
     kickoff: m.scheduled ?? m.time ?? "—",
     status,
     liveMinute: liveInfo.minute,
@@ -178,6 +178,21 @@ const apiMatchToRow = (m: ApiMatch): MatchRow => {
     score,
     ht,
   };
+};
+
+const toTurkeyKickoff = (kickoff: string, date?: string): string => {
+  const raw = (kickoff ?? "").trim();
+  const hm = /^(\d{2}):(\d{2})/.exec(raw);
+  if (!hm) return kickoff;
+
+  const baseDate = date?.trim() ? date : new Date().toISOString().slice(0, 10);
+  const utcDate = new Date(`${baseDate}T${hm[1]}:${hm[2]}:00Z`);
+  if (Number.isNaN(utcDate.getTime())) return kickoff;
+
+  const trHour = String(utcDate.getUTCHours() + 3).padStart(2, "0");
+  const trMinute = String(utcDate.getUTCMinutes()).padStart(2, "0");
+  const normalizedHour = String(Number(trHour) % 24).padStart(2, "0");
+  return `${normalizedHour}:${trMinute}`;
 };
 
 const LeagueHeader = ({ section }: { section: LeagueSection }) => (
@@ -226,7 +241,9 @@ const TeamBlock = ({
 };
 
 const MatchRowView = ({ item, onPress }: { item: MatchRow; onPress?: () => void }) => {
-  const { kickoff, status, liveMinute, liveLabel, home, away, score: sc, ht } = item;
+  const { kickoff, date, status, liveMinute, liveLabel, home, away, score: sc, ht } = item;
+  const kickoffTr = toTurkeyKickoff(kickoff, date);
+
   const htText = ht == null ? "—" : `${ht.home}-${ht.away}`;
   const hasScore = sc != null;
   let homeStrong = false;
@@ -268,7 +285,7 @@ const MatchRowView = ({ item, onPress }: { item: MatchRow; onPress?: () => void 
       <View className="border-b border-neutral-50 px-3.5 pb-2.5 pt-3">
         <View className="flex-row items-center justify-between">
           <View className="rounded-lg bg-neutral-100 px-2.5 py-1">
-            <Text className="text-xs font-bold tabular-nums text-neutral-700">{kickoff}</Text>
+            <Text className="text-xs font-bold tabular-nums text-neutral-700">{kickoffTr}</Text>
           </View>
           {statusBlock}
         </View>
@@ -296,11 +313,64 @@ const MatchRowView = ({ item, onPress }: { item: MatchRow; onPress?: () => void 
 
 type Section = { title: string; league: LeagueSection; data: MatchRow[] };
 
+const sectionTier = (g: GroupedLeagueMatches): number => {
+  const compId = Number(g.competition_id);
+  const country = (g.country_name ?? "").toLowerCase();
+  const league = (g.competition_name ?? "").toLowerCase();
+  if (
+    TURKEY_COMPETITION_IDS.includes(compId) ||
+    country.includes("turk") ||
+    league.includes("süper lig") ||
+    league.includes("super lig") ||
+    league.includes("1st lig") ||
+    league.includes("2nd lig")
+  ) {
+    return 1;
+  }
+  if (UEFA_TIER2_COMPETITION_IDS.includes(compId)) return 2;
+  if (BIG_FIVE_COMPETITION_ORDER.includes(compId)) return 3;
+  return 4;
+};
+
+const sectionOrder = (g: GroupedLeagueMatches): number => {
+  const compId = Number(g.competition_id);
+  const tier = sectionTier(g);
+  if (tier === 1) {
+    const idx = TURKEY_COMPETITION_IDS.indexOf(compId);
+    return idx >= 0 ? idx : 500;
+  }
+  if (tier === 2) {
+    const idx = UEFA_TIER2_COMPETITION_IDS.indexOf(compId);
+    return idx >= 0 ? idx : 900;
+  }
+  if (tier === 3) {
+    const idx = BIG_FIVE_COMPETITION_ORDER.indexOf(compId);
+    return idx >= 0 ? idx : 900;
+  }
+  return 0;
+};
+
+const compareGroupedForUi = (a: GroupedLeagueMatches, b: GroupedLeagueMatches): number => {
+  const ta = sectionTier(a);
+  const tb = sectionTier(b);
+  if (ta !== tb) return ta - tb;
+
+  const oa = sectionOrder(a);
+  const ob = sectionOrder(b);
+  if (oa !== ob) return oa - ob;
+
+  if (ta === 4) {
+    const byCountry = (a.country_name ?? "").localeCompare(b.country_name ?? "", "tr");
+    if (byCountry !== 0) return byCountry;
+  }
+  return (a.competition_name ?? "").localeCompare(b.competition_name ?? "", "tr");
+};
+
 const MatchesScreen = () => {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const [filter, setFilter] = useState<TopFilter>("all");
-  const [selectedDate, setSelectedDate] = useState<string>(() => toIsoDate(new Date()));
+  const [selectedDate, setSelectedDate] = useState<string>(() => new Date().toISOString().slice(0, 10));
   const historyMatches = useAppSelector((state) => state.matches.historyList);
   const liveMatches = useAppSelector((state) => state.matches.liveList);
   const fixtureMatches = useAppSelector((state) => state.matches.fixtureList);
@@ -341,14 +411,15 @@ const MatchesScreen = () => {
 
   const grouped = useMemo((): GroupedLeagueMatches[] => {
     const raw = groupMatchesByLeague(displayMatches);
-    return filter === "all" ? sortGroupedMatchesForAllTab(raw) : raw;
+    const sortedByWeb = filter === "all" ? sortGroupedMatchesForAllTab(raw) : raw;
+    return [...sortedByWeb].sort(compareGroupedForUi);
   }, [displayMatches, filter]);
 
   const sections = useMemo((): Section[] => {
     return grouped.map((g) => {
       const code = g.country_flag?.replace(/\.[a-z]+$/i, "") || "";
       const league: LeagueSection = {
-        id: `${g.competition_id}`,
+        id: g.group_key,
         country: g.country_name ?? "Uluslararası",
         league: g.competition_name || "Lig",
         flag: flagForFifa(code),
@@ -411,6 +482,9 @@ const MatchesScreen = () => {
         <SectionList
           style={{ flex: 1 }}
           sections={sections}
+          initialNumToRender={16}
+          maxToRenderPerBatch={16}
+          windowSize={12}
           keyExtractor={({ id }) => id}
           stickySectionHeadersEnabled
           renderSectionHeader={({ section }) => <LeagueHeader section={section.league} />}
