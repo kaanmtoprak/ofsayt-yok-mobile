@@ -34,6 +34,7 @@ type PaginatedMatches = {
 };
 
 export type GroupedLeagueMatches = {
+  group_key: string;
   competition_id: number;
   competition_name: string;
   country_id?: number;
@@ -143,18 +144,28 @@ const normalizeFixtureToMatch = (raw: ApiFixture): ApiMatch => {
 };
 
 const getFixturesByDate = async (isoDate: string, competitionId?: number): Promise<ApiMatch[]> => {
-  const dateParam = isoDate === todayIsoUtc() ? "today" : isoDate;
-  const params: Record<string, string | number | boolean | undefined> = { date: dateParam, page: 1 };
-  if (competitionId != null) params.competition_id = competitionId;
-  const response = await get<MatchesApiResponse>("fixtures/list.json", params);
-  const list = response.data?.fixtures ?? response.data?.fixture;
-  if (response.success && Array.isArray(list)) {
-    return list.map(normalizeFixtureToMatch);
+  const fetchOne = async (dateParam: string): Promise<ApiMatch[]> => {
+    const params: Record<string, string | number | boolean | undefined> = { date: dateParam, page: 1 };
+    if (competitionId != null) params.competition_id = competitionId;
+    const response = await get<MatchesApiResponse>("fixtures/list.json", params);
+    const list = response.data?.fixtures ?? response.data?.fixture;
+    if (response.success && Array.isArray(list)) {
+      return list.map(normalizeFixtureToMatch);
+    }
+    if (response.success && Array.isArray(response.data?.match)) {
+      return response.data.match;
+    }
+    return [];
+  };
+
+  if (isoDate === todayIsoUtc()) {
+    // Upstream "today" bazı saat dilimlerinde farklı günü döndürebiliyor.
+    // Web davranışını koruyup veri kaçırmamak için her iki varyasyonu birleştiriyoruz.
+    const [todayList, explicitDateList] = await Promise.all([fetchOne("today"), fetchOne(isoDate)]);
+    return dedupeMatchesById([...todayList, ...explicitDateList]);
   }
-  if (response.success && Array.isArray(response.data?.match)) {
-    return response.data.match;
-  }
-  return [];
+
+  return fetchOne(isoDate);
 };
 
 const isLiveMatchOnSelectedDate = (m: ApiMatch, selectedDate: string): boolean => {
@@ -204,24 +215,36 @@ const compareMatchesForAllTab = (a: ApiMatch, b: ApiMatch): number => {
 };
 
 const groupMatchesByLeague = (matches: ApiMatch[]): GroupedLeagueMatches[] => {
-  const grouped = new Map<number, GroupedLeagueMatches>();
+  const grouped = new Map<string, GroupedLeagueMatches>();
   matches.forEach((match) => {
-    const competitionId = match.competition?.id || 0;
-    const competitionName = match.competition?.name || match.competition_name || "";
+    const competitionId = Number(match.competition?.id ?? match.competition_id ?? 0);
+    const competitionName =
+      match.competition?.name ?? match.competition_name ?? match.league_name ?? "Diğer Lig";
     const countryObj = typeof match.country === "string" ? undefined : match.country;
+    const countryId = Number(countryObj?.id ?? match.country_id ?? 0);
+    const countryName =
+      countryObj?.name ??
+      (typeof match.country === "string" ? match.country : undefined) ??
+      match.country_name;
+    const safeCompetitionId = Number.isFinite(competitionId) ? competitionId : 0;
+    const safeCountryId = Number.isFinite(countryId) && countryId > 0 ? countryId : undefined;
+    const normalizedName = competitionName.trim().toLowerCase();
+    const groupKey =
+      safeCompetitionId > 0 ? `id:${safeCompetitionId}` : `name:${normalizedName || "unknown"}`;
 
-    if (!grouped.has(competitionId)) {
-      grouped.set(competitionId, {
-        competition_id: competitionId,
+    if (!grouped.has(groupKey)) {
+      grouped.set(groupKey, {
+        group_key: groupKey,
+        competition_id: safeCompetitionId,
         competition_name: competitionName,
-        country_id: countryObj?.id,
-        country_name: countryObj?.name ?? (typeof match.country === "string" ? match.country : undefined),
+        country_id: safeCountryId,
+        country_name: countryName,
         country_flag: countryObj?.flag,
         competition_logo: match.competition?.logo,
         matches: [],
       });
     }
-    grouped.get(competitionId)!.matches.push(match);
+    grouped.get(groupKey)!.matches.push(match);
   });
 
   return Array.from(grouped.values()).sort(compareGroupedLeagues);
